@@ -1,42 +1,110 @@
-﻿using System.Text;
+﻿using System.IO.Ports;
+using System.Text;
+using System.Text.Json;
+using System.Globalization;
 
-HttpClient cliente = new HttpClient();
+string puerto = "COM3"; // Cambia si tu Arduino usa otro COM
 
-// TU CLAVE PUBLICABLE DE SUPABASE
 string apiKey = "sb_publishable_lZAgCTxQ_5lbJJCOYxWWxg_ZSFXDgw9";
 
-// Cabeceras requeridas por Supabase
-cliente.DefaultRequestHeaders.Add("apikey", apiKey);
-cliente.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-
-// Registro de prueba
-string json = """
-{
-    "temperatura": 25.5,
-    "humedad": 60.2,
-    "estado": "ESTABLE"
-}
-""";
-
-var contenido = new StringContent(
-    json,
-    Encoding.UTF8,
-    "application/json"
-);
-
-// URL de tu tabla registros
 string url =
     "https://ricukmhudmkwetdfrdpe.supabase.co/rest/v1/registros";
 
-var respuesta = await cliente.PostAsync(url, contenido);
+SerialPort serial = new SerialPort(puerto, 9600);
 
-Console.WriteLine($"Código HTTP: {(int)respuesta.StatusCode}");
+serial.ReadTimeout = 5000;
 
-string respuestaTexto =
-    await respuesta.Content.ReadAsStringAsync();
+try
+{
+    serial.Open();
 
-Console.WriteLine("Respuesta:");
-Console.WriteLine(respuestaTexto);
+    Console.WriteLine($"Conectado a {puerto}");
+    Console.WriteLine("Esperando reinicio del Arduino...");
 
-Console.WriteLine("\nPresiona una tecla para salir...");
-Console.ReadKey();
+    Thread.Sleep(3000);
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error al abrir puerto: {ex.Message}");
+    Console.ReadKey();
+    return;
+}
+
+HttpClient cliente = new HttpClient();
+
+cliente.DefaultRequestHeaders.Add("apikey", apiKey);
+cliente.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+Console.WriteLine("Escuchando Arduino...");
+
+while (true)
+{
+    try
+    {
+        string linea = serial.ReadLine().Trim();
+
+        Console.WriteLine($"Recibido: {linea}");
+
+        string[] datos = linea.Split(',');
+
+        if (datos.Length != 2)
+        {
+            Console.WriteLine("Línea ignorada");
+            continue;
+        }
+
+        float temperatura = float.Parse(
+            datos[0],
+            CultureInfo.InvariantCulture
+        );
+
+        float humedad = float.Parse(
+            datos[1],
+            CultureInfo.InvariantCulture
+        );
+
+        var registro = new
+        {
+            temperatura = temperatura,
+            humedad = humedad,
+            estado = "PRUEBA"
+        };
+
+        string json = JsonSerializer.Serialize(registro);
+
+        Console.WriteLine("JSON enviado:");
+        Console.WriteLine(json);
+
+        var contenido = new StringContent(
+            json,
+            Encoding.UTF8,
+            "application/json"
+        );
+
+        var respuesta = await cliente.PostAsync(
+            url,
+            contenido
+        );
+
+        Console.WriteLine($"HTTP: {(int)respuesta.StatusCode}");
+
+        string respuestaTexto =
+            await respuesta.Content.ReadAsStringAsync();
+
+        Console.WriteLine("Respuesta Supabase:");
+        Console.WriteLine(respuestaTexto);
+
+        Console.WriteLine("--------------------------------");
+    }
+    catch (TimeoutException)
+    {
+        Console.WriteLine("Esperando datos...");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"ERROR: {ex.Message}");
+        break;
+    }
+}
+
+serial.Close();
