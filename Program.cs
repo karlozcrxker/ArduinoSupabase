@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Globalization;
 
-string puerto = "COM3"; // Cambia si tu Arduino usa otro COM
+string puerto = "COM3"; // Cambiar solo si existe otro COM
 
 string apiKey = "sb_publishable_lZAgCTxQ_5lbJJCOYxWWxg_ZSFXDgw9";
 
