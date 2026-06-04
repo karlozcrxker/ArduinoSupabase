@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Globalization;
 
-string puerto = "COM3"; // Cambiar solo si existe otro COM
+string puerto = "COM3"; // Cambiar si es necesario
 
 string apiKey = "sb_publishable_lZAgCTxQ_5lbJJCOYxWWxg_ZSFXDgw9";
 
@@ -47,7 +47,7 @@ while (true)
 
         string[] datos = linea.Split(',');
 
-        if (datos.Length != 2)
+        if (datos.Length != 3)
         {
             Console.WriteLine("Línea ignorada");
             continue;
@@ -63,11 +63,13 @@ while (true)
             CultureInfo.InvariantCulture
         );
 
+        string estado = datos[2].Trim();
+
         var registro = new
         {
             temperatura = temperatura,
             humedad = humedad,
-            estado = "PRUEBA"
+            estado = estado
         };
 
         string json = JsonSerializer.Serialize(registro);
@@ -103,7 +105,6 @@ while (true)
     catch (Exception ex)
     {
         Console.WriteLine($"ERROR: {ex.Message}");
-        break;
     }
 }
 
