@@ -45,6 +45,12 @@ while (true)
 
         Console.WriteLine($"Recibido: {linea}");
 
+        if (linea == "ERROR")
+        {
+            Console.WriteLine("Arduino reportó error de sensor.");
+            continue;
+        }
+
         string[] datos = linea.Split(',');
 
         if (datos.Length != 3)
@@ -67,9 +73,9 @@ while (true)
 
         var registro = new
         {
-            temperatura = temperatura,
-            humedad = humedad,
-            estado = estado
+            temperatura,
+            humedad,
+            estado
         };
 
         string json = JsonSerializer.Serialize(registro);
